@@ -4,7 +4,7 @@
  * Class: CS 445 – Computer Graphics
  * <p>
  * Assignment: program 2
- * Date last modified: 10/22/2015
+ * Date last modified: 10/25/2015
  * Purpose: Holds information for the polygon.
  ******************************************************************************/
 package program2;
@@ -12,12 +12,18 @@ package program2;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import static org.lwjgl.opengl.GL11.GL_POINTS;
 import static org.lwjgl.opengl.GL11.glBegin;
 import static org.lwjgl.opengl.GL11.glColor3f;
 import static org.lwjgl.opengl.GL11.glEnd;
 import static org.lwjgl.opengl.GL11.glPointSize;
 import static org.lwjgl.opengl.GL11.glVertex2f;
+import static org.lwjgl.opengl.GL11.glRotatef;
+import static org.lwjgl.opengl.GL11.glScalef;
+import static org.lwjgl.opengl.GL11.glTranslatef;
+import static org.lwjgl.opengl.GL11.glLoadIdentity;
 
 /**
  * @author wynnetran
@@ -31,6 +37,9 @@ public class Polygon {
     private List<float[]> globalEdge;
     private List<float[]> activeEdge;
     private float scanLine;
+    
+    private float midX;
+    private float midY;
 
     public Polygon(float[] rgb, List<float[]> vertices,
                    List<Object[]> transformations) {
@@ -46,6 +55,26 @@ public class Polygon {
         for (float[] vertex : vertices) {
             this.vertices.add(vertex);
         }
+        
+        // Find max and min X and max and min Y to find midpoint
+        float maxX = this.vertices.get(0)[0];
+        float maxY = this.vertices.get(0)[1];
+        float minX = this.vertices.get(0)[0];
+        float minY = this.vertices.get(0)[1];
+        for (float[] vertex : this.vertices) {
+            if (vertex[0] > maxX) {
+                maxX = vertex[0];
+            } if (vertex[0] < minX) {
+                minX = vertex[0];
+            } if (vertex[1] > maxY) {
+                maxY = vertex[1];
+            } if (vertex[1] < minY) {
+                minY = vertex[1];
+            }
+        }
+        
+        midX = minX + ((maxX - minX) / 2);
+        midY = minY + ((maxY - minY) / 2);
 
         // Set transformations
         this.transformations = new ArrayList();
@@ -55,13 +84,45 @@ public class Polygon {
             }
         }
 
-        draw();
     }
 
     /**
      * Draws and fills polygon.
      */
     public void draw() {
+        
+        // Apply transformations
+        for (int ndx = transformations.size() - 1; ndx >= 0; ndx--) {
+            Object[] transformation = transformations.get(ndx);
+            if (transformation[0].equals("r")) {
+                
+                // Translate back
+                glTranslatef(midX, midY, 0);
+                
+                // Rotate
+                glRotatef((float) transformation[1], (float) transformation[2],
+                        (float) transformation[3], 1);
+                
+                // Translate to origin
+                glTranslatef(midX - (2 * midX), midY - (2 * midY),0);
+                
+            } else if (transformation[0].equals("s")) {
+                
+                // Translate back
+                glTranslatef(midX, midY, 0);
+                
+                // Scale
+                glScalef((float) transformation[1],
+                        (float) transformation[2], 0);
+                
+                // Translate to origin
+                glTranslatef(midX - (2 * midX), midY - (2 * midY),0);
+                
+            } else if (transformation[0].equals("t")) {
+                glTranslatef((float) transformation[1],
+                        (float) transformation[2], 0);
+            }
+        }
 
         // Initialize all edges table
         initializeAllEdgesTable();
@@ -74,21 +135,71 @@ public class Polygon {
 
         // Initialize scanline
         float[] firstEdgeValue = globalEdge.get(0);
-        scanLine = firstEdgeValue[1];
+        scanLine = firstEdgeValue[0];
 
         // Initialize active edge table
         initializeActiveEdgeTable();
 
+        float startingEdge = -1;
+
         while (!activeEdge.isEmpty()) {
 
-        }
+            // Go through active edge table and get x values and alternate
+            // parities
+            for (int ndx = 0; ndx < activeEdge.size(); ndx++) {
+                float[] edge = activeEdge.get(ndx);
 
+                if (parity) {
+                    startingEdge = edge[1];
+                    parity = false;
+                } else {
+                    drawLine(startingEdge, edge[1]);
+                    parity = true;
+                }
+
+                // Update x using formula x = x + 1/m
+                edge[1] = edge[1] + edge[2];
+            }
+
+            // Increment the scanline and remove edges from the active edge
+            // table whose max y equals the scanline
+            scanLine++;
+            for (int ndx = 0; ndx < activeEdge.size(); ndx++) {
+                if (activeEdge.get(ndx)[0] == scanLine) {
+                    activeEdge.remove(ndx--);
+                }
+            }
+
+            // Add edges from global edge table whose min y values are equal
+            // to the scanline
+            for (float[] edge : globalEdge) {
+                if (edge[0] == scanLine) {
+                    float[] edgeValue = new float[3];
+                    System.arraycopy(edge, 1, edgeValue, 0, 3);
+                    activeEdge.add(edgeValue);
+                }
+            }
+
+            // Re-sort the active edge table so that the x's are in
+            // increasing order
+            Collections.sort(activeEdge, new Comparator<float[]>() {
+
+                @Override
+                public int compare(float[] edge1, float[] edge2) {
+                    float result = Float.compare(edge1[1], edge2[1]);
+                    return (int) result;
+                }
+            });
+        }
+        
+        glLoadIdentity();
+        
     }
 
     /**
-     * Creates all_edges table. Each index contains an edge number with a pointer
-     * to an array containing the minimum y-value, maximum y-value, x value of
-     * the minimum y-value, and slope.
+     * Creates all_edges table. Each index contains an edge number with a
+     * pointer to an array containing the minimum y-value, maximum y-value, x
+     * value of the minimum y-value, and slope.
      */
     private void initializeAllEdgesTable() {
         allEdges = new float[vertices.size()][4];
@@ -138,9 +249,8 @@ public class Polygon {
                     && allEdges[ndx][3] != Float.NEGATIVE_INFINITY) {
 
                 if (addedFirstEdge == false) {
-                    float[] edge = new float[5];
-                    edge[0] = ndx;
-                    System.arraycopy(allEdges[ndx], 0, edge, 1, 4);
+                    float[] edge = new float[4];
+                    System.arraycopy(allEdges[ndx], 0, edge, 0, 4);
                     globalEdge.add(edge);
                     addedFirstEdge = true;
                 } else {
@@ -156,21 +266,21 @@ public class Polygon {
 
                             // If the edge being added has a greater min y than
                             // the current global edge's min y value, continue
-                            if (allEdges[ndx][0] > globalEdgeValue[1]) {
+                            if (allEdges[ndx][0] > globalEdgeValue[0]) {
                                 continue;
                             } else {
 
-                                if ((allEdges[ndx][0] == globalEdgeValue[1] &&
-                                        allEdges[ndx][2] <= globalEdgeValue[3])
+                                if ((allEdges[ndx][0] == globalEdgeValue[0] &&
+                                        allEdges[ndx][2] <= globalEdgeValue[2])
                                         || allEdges[ndx][0]
-                                        < globalEdgeValue[1]) {
+                                        < globalEdgeValue[0]) {
 
                                     // If the edge being added has a lesser min
                                     // y and x value than the current global
                                     // edge, add it to the global edges table
-                                    float[] edge = new float[5];
-                                    edge[0] = ndx;
-                                    System.arraycopy(allEdges[ndx], 0, edge, 1, 4);
+                                    float[] edge = new float[4];
+                                    System.arraycopy(allEdges[ndx], 0,
+                                            edge, 0, 4);
                                     globalEdge.add(i++, edge);
                                     addedEdge = true;
                                 }
@@ -179,20 +289,13 @@ public class Polygon {
                     }
 
                     if (!addedEdge) {
-                        float[] edge = new float[5];
-                        edge[0] = ndx;
-                        System.arraycopy(allEdges[ndx], 0, edge, 1, 4);
+                        float[] edge = new float[4];
+                        System.arraycopy(allEdges[ndx], 0, edge, 0, 4);
                         globalEdge.add(edge);
                         addedEdge = true;
                     }
                 }
             }
-        }
-
-        // Go through global edge table and reset the indices
-        for (int ndx = 0; ndx < globalEdge.size(); ndx++) {
-            float[] edge = globalEdge.get(ndx);
-            edge[0] = ndx;
         }
     }
 
@@ -205,10 +308,9 @@ public class Polygon {
         int ndx = 0;
         float[] edge = globalEdge.get(0);
 
-        while (edge[1] == scanLine) {
-            float[] newEdge = new float[4];
-            newEdge[0] = edge[0];
-            System.arraycopy(edge, 2, newEdge, 1, 3);
+        while (edge[0] == scanLine) {
+            float[] newEdge = new float[3];
+            System.arraycopy(edge, 1, newEdge, 0, 3);
 
             // Move edge from global edge table to active edge table
             activeEdge.add(newEdge);
@@ -241,20 +343,27 @@ public class Polygon {
     private void drawLine(final float startingX, final float endingX) {
         // Set color and size of points
         glColor3f(color[0], color[1], color[2]);
-        glPointSize(1);
+        glPointSize(2);
 
         float x = startingX;
 
-        // Draw first point
+        // Begin drawing
         glBegin(GL_POINTS);
-        glVertex2f(x, scanLine);
-
+        
         // While we haven't drawn the end point
         while (x <= endingX) {
             glVertex2f(x++, scanLine);
         }
 
         glEnd();
+    }
+    
+    /**
+     * Sets color of polygon.
+     * @param color color to set the polygon
+     */
+    public void setColor(float[] color) {
+        System.arraycopy(color, 0, this.color, 0, 3);
     }
 
 }

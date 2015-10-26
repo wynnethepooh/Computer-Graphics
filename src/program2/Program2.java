@@ -4,9 +4,10 @@
 * Class: CS 445 – Computer Graphics
 *
 * Assignment: program 2
-* Date last modified: 10/22/2015
+* Date last modified: 10/25/2015
 * Purpose: Draws a window in the center of the screen and reads coordinates to 
-* create filled polygons from a coordinates.txt file. 
+* create filled polygons from a coordinates.txt file. To change the color of a
+* polygon, the user can press the corresponding number key.
 *******************************************************************************/
 package program2;
 
@@ -16,10 +17,13 @@ import java.io.IOException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import static org.lwjgl.opengl.GL11.*;
+import org.lwjgl.opengl.*;
 import org.lwjgl.input.Keyboard;
+import static org.lwjgl.util.glu.GLU.gluOrtho2D;
 
 /**
  *
@@ -29,8 +33,11 @@ public class Program2 {
     
     private final String COORDINATES = "coordinates.txt";
     private List<Polygon> polygons;
+    private Random random;
     
-    public Program2() {}
+    public Program2() {
+        random = new Random();
+    }
     
     /**
      * Creates window and draws shapes from coordinates file.
@@ -69,7 +76,9 @@ public class Program2 {
         
         // Setup our orthographic matrix with a size of 640 by 480 with a
         // clipping distance between 1 and -1
-        glOrtho(0, 640, 0, 480, 1, -1);
+//        glOrtho(0, 640, 0, 480, 1, -1);
+        
+        gluOrtho2D(-320.0f, 320.0f, -240.0f, 240.0f);
         
         // Set up our scene to Model view, and provide some rendering hints
         glMatrixMode(GL_MODELVIEW);
@@ -84,13 +93,15 @@ public class Program2 {
         while (!Display.isCloseRequested()
                 && !Keyboard.isKeyDown(Keyboard.KEY_ESCAPE)) {
             
+            randomizeColor();
+            
             try {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 glLoadIdentity();
                                 
                 // Draw polygons
                 for (Polygon polygon : this.polygons) {
-                    polygon.draw();
+                    polygon.draw();   
                 }
                 
                 Display.update();
@@ -101,6 +112,119 @@ public class Program2 {
         }
         
         Display.destroy();
+    }
+    
+    /**
+     * Randomizes the color of each polygon, numbered 0 - 9. If the user presses
+     * any number key, the corresponding polygon will change colors.
+     */
+    private void randomizeColor() {
+        float[] color;
+        
+        // If user presses "l" key, line color changes
+        if (Keyboard.isKeyDown(Keyboard.KEY_0)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(0) != null) {
+                this.polygons.get(0).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_1)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(1) != null) {
+                this.polygons.get(1).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_2)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(2) != null) {
+                this.polygons.get(2).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_3)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(3) != null) {
+                this.polygons.get(3).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_4)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(4) != null) {
+                this.polygons.get(4).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_5)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(5) != null) {
+                this.polygons.get(5).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_6)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(6) != null) {
+                this.polygons.get(6).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_7)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(7) != null) {
+                this.polygons.get(7).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_8)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(8) != null) {
+                this.polygons.get(8).setColor(color);
+            }
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_9)) {
+            color = new float[] {
+                random.nextFloat(),
+                random.nextFloat(),
+                random.nextFloat()
+            };
+            
+            if (this.polygons.get(9) != null) {
+                this.polygons.get(9).setColor(color);
+            }
+        }
+        
+        
     }
     
     /**
